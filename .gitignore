@@ -1,0 +1,32 @@
+# Audit logs - generated at runtime, can contain sensitive data
+cluster/audit-logs/
+
+# Kubernetes credentials - never commit these
+*.key
+*.crt
+*.csr
+*.srl
+kubeconfig
+*-kubeconfig
+
+# kind kubeconfig output
+.kube/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local files
+.env
+cluster/kind-config.yaml
+logs/
+rbac/*.key
+rbac/*.crt
+rbac/*.csr
+rbac/*.srl
