@@ -1,5 +1,5 @@
 # Audit logs - generated at runtime, can contain sensitive data
-cluster/audit-logs/
+audit-logs/
 
 # Kubernetes credentials - never commit these
 *.key
