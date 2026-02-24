@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-access-pod
+  namespace: production
+spec:
+  hostNetwork: true    # VIOLATION: shares host network namespace
+  hostPID: true        # VIOLATION: can see all host processes
+  hostIPC: true        # VIOLATION: can communicate via host IPC
+  containers:
+    - name: app
+      image: nginx:alpine

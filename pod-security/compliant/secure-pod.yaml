@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secure-pod
+  namespace: production
+spec:
+  securityContext:
+    runAsNonRoot: true          # must not run as root
+    runAsUser: 10001            # explicit non-root UID
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault      # enables default seccomp filtering
+  containers:
+    - name: app
+      image: nginx:alpine
+      securityContext:
+        allowPrivilegeEscalation: false   # cannot gain more privileges
+        readOnlyRootFilesystem: true      # filesystem is immutable
+        capabilities:
+          drop: ["ALL"]                   # drop every Linux capability
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi

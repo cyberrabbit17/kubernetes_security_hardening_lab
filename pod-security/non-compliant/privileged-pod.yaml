@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-pod
+  namespace: production
+spec:
+  containers:
+    - name: app
+      image: nginx:alpine
+      securityContext:
+        privileged: true          # VIOLATION: full host access
+        runAsUser: 0              # VIOLATION: running as root
+        allowPrivilegeEscalation: true  # VIOLATION: can gain more privileges
