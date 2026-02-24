@@ -30,3 +30,4 @@ rbac/*.key
 rbac/*.crt
 rbac/*.csr
 rbac/*.srl
+kind-debug.log
