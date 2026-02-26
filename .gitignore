@@ -31,3 +31,4 @@ rbac/*.crt
 rbac/*.csr
 rbac/*.srl
 kind-debug.log
+*.bak
