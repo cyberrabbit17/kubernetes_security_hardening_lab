@@ -1,0 +1,69 @@
+# =====================================================================
+# Falco Helm Values - Kubernetes Security Hardening Lab
+# Phase 5: Runtime Threat Detection
+# =====================================================================
+# Install (run from repo root):
+#   helm repo add falcosecurity https://falcosecurity.github.io/charts
+#   helm repo update falcosecurity
+#   helm upgrade --install falco falcosecurity/falco \
+#     --namespace falco --create-namespace \
+#     -f falco/values.yaml \
+#     --set-file 'customRules.lab_rules\.yaml=falco/custom-rules.yaml' \
+#     --wait --timeout=5m
+#
+# Or use setup.sh which handles this automatically.
+# =====================================================================
+
+driver:
+  # modern_ebpf: CO-RE eBPF driver. No kernel headers or module compilation
+  # required. This is the correct choice for kind clusters on Apple Silicon
+  # with Docker Desktop where the host kernel headers are not accessible.
+  # Alternative: ebpf (requires kernel headers), module (requires kernel module)
+  kind: modern_ebpf
+
+falco:
+  # Load the default Falco ruleset plus our lab-specific rules.
+  # The Helm chart mounts customRules files into /etc/falco/rules.d/ (not /etc/falco/).
+  # lab_rules.yaml is injected by --set-file during helm install (see setup.sh).
+  rules_files:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/rules.d/lab_rules.yaml
+
+  # JSON output makes alerts easy to parse with jq and forward to SIEM tools.
+  json_output: true
+  json_include_output_property: true
+
+  # Log level controls the Falco daemon's own logs, not alert output.
+  log_level: info
+
+  # Minimum alert priority to emit. WARNING and above for production noise control.
+  # DEBUG captures all rules including low-priority signals — appropriate for a lab.
+  priority: debug
+
+  # gRPC disabled — falcosidekick integration is outside the scope of this lab.
+  grpc:
+    enabled: false
+  grpc_output:
+    enabled: false
+
+# Falco must run on every node to provide complete coverage.
+# kind control-plane nodes carry a NoSchedule taint — this toleration
+# allows Falco to schedule there so no node is left unmonitored.
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+# Disable falcoctl automatic rule updates.
+# The falcoctl-artifact-follow sidecar rewrites /etc/falco/falco_rules.yaml from OCI
+# and triggers a Falco hot-reload. On Docker Desktop (linuxkit kernel), the probe
+# fails to re-attach after the reload and Falco stops capturing events.
+# Rules are managed statically via the customRules ConfigMap instead.
+falcoctl:
+  artifact:
+    follow:
+      enabled: false
+    install:
+      refs:
+        - falco-rules:5
+      enabled: true

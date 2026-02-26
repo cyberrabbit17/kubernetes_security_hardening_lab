@@ -1,0 +1,63 @@
+customRules:
+  custom-rules.yaml: |-
+    - rule: Shell Spawned in Container
+      desc: >
+        A shell was spawned inside a container.
+      condition: >
+        spawned_process
+        and container
+        and container.image.repository != ""
+        and proc.name in (bash, sh, zsh, dash, fish)
+        and not proc.pname in (containerd, dockerd, runc)
+      output: >
+        Shell spawned in container
+        (user=%user.name user_uid=%user.uid container=%container.name
+        image=%container.image.repository proc=%proc.name
+        parent=%proc.pname cmdline=%proc.cmdline)
+      priority: WARNING
+      tags: [container, shell, mitre_execution]
+
+    - rule: Sensitive File Read in Container
+      desc: >
+        A sensitive file was read inside a container.
+      condition: >
+        open_read
+        and container
+        and fd.name in (/etc/passwd, /etc/shadow, /etc/sudoers,
+                        /root/.ssh/authorized_keys, /root/.ssh/id_rsa,
+                        /run/secrets/kubernetes.io/serviceaccount/token)
+      output: >
+        Sensitive file read in container
+        (user=%user.name file=%fd.name container=%container.name
+        image=%container.image.repository proc=%proc.name)
+      priority: ERROR
+      tags: [container, credentials, mitre_credential_access]
+
+    - rule: Package Management in Container
+      desc: >
+        A package manager was run inside a container.
+      condition: >
+        spawned_process
+        and container
+        and proc.name in (apt, apt-get, apk, yum, dnf, pip, pip3, npm)
+      output: >
+        Package manager run in container
+        (user=%user.name container=%container.name
+        image=%container.image.repository proc=%proc.name
+        cmdline=%proc.cmdline)
+      priority: ERROR
+      tags: [container, mitre_persistence]
+
+    - rule: K8s Service Account Token Read
+      desc: >
+        A process read the Kubernetes service account token.
+      condition: >
+        open_read
+        and container
+        and fd.name startswith /run/secrets/kubernetes.io/serviceaccount
+      output: >
+        Service account token read
+        (user=%user.name file=%fd.name container=%container.name
+        image=%container.image.repository proc=%proc.name)
+      priority: WARNING
+      tags: [container, kubernetes, mitre_credential_access]
