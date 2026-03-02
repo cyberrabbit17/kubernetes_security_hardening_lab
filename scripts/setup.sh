@@ -32,6 +32,11 @@ if ! command -v envsubst &>/dev/null; then
   exit 1
 fi
 
+if ! command -v helm &>/dev/null; then
+  echo "Error: helm is not installed. https://helm.sh/docs/intro/install/"
+  exit 1
+fi
+
 if ! docker info &>/dev/null; then
   echo "Error: Docker is not running. Start Docker Desktop and retry."
   exit 1
@@ -153,6 +158,32 @@ kubectl apply -f network-policies/default-deny.yaml
 kubectl apply -f network-policies/allow-rules/
 echo "✓ Network Policies applied"
 
+# --- Phase 5: Falco Runtime Security ---
+
+echo ""
+echo "[Phase 5] Installing Falco runtime security..."
+
+helm repo add falcosecurity https://falcosecurity.github.io/charts 2>/dev/null || true
+helm repo update falcosecurity
+
+# Uninstall existing Falco release if present to avoid conflicts
+if helm list -n falco 2>/dev/null | grep -q falco; then
+  echo "  Removing existing Falco installation..."
+  helm uninstall falco -n falco
+  kubectl delete namespace falco 2>/dev/null || true
+  sleep 5
+fi
+
+helm install falco falcosecurity/falco \
+  --namespace falco \
+  --create-namespace \
+  --set driver.kind=ebpf \
+  --values falco/custom-rules.yaml
+
+echo "Waiting for Falco daemonset to roll out..."
+kubectl rollout status daemonset/falco -n falco --timeout=180s
+echo "✓ Falco installed and running"
+
 # --- Done ---
 
 echo ""
@@ -166,7 +197,11 @@ echo ""
 echo "System pods:"
 kubectl get pods -n kube-system
 echo ""
+echo "Falco pods:"
+kubectl get pods -n falco
+echo ""
 echo "Next steps:"
 echo "  - Verify network policies: kubectl get networkpolicies -n production"
 echo "  - Run attack simulations:  ./scripts/attack-simulation.sh"
-echo "  - View audit logs:         kubectl logs -n falco -l app=falco -f"
+echo "  - Watch Falco alerts:      kubectl logs -n falco -l app.kubernetes.io/name=falco --prefix -f | grep '[Lab]'"
+echo "  - Run Trivy image scan:      trivy image nginx:alpine"
